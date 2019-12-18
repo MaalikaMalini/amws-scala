@@ -35,8 +35,12 @@ lazy val amwsScala =
         library.yaidom,
         library.akkaHttpTestkit % Test,
         library.scalaCheck      % Test,
-	library.scalaCheckTools % Test,
-        library.scalaTest       % Test
+	      library.scalaCheckTools % Test,
+        library.scalaTest       % Test,
+        library.http4sBlazeClient,
+        library.http4sDsl,
+        library.catsEffect
+
       ),
       wartremoverWarnings in (Compile, compile) ++= Warts.unsafe
     )
@@ -51,21 +55,26 @@ lazy val library =
       val akkaHttp        = "10.1.11"
       val akkaStream      = "2.6.1"
       val cats            = "2.1.0"
+      val catsEffect      = "2.0.0"
       val scalaCheck      = "1.14.3"
       val scalaCheckTools = "0.3.1"
       val scalaTest       = "3.0.8"
       val shapeless       = "2.3.2"
       val yaidom          = "1.10.1"
+      val http4s = "0.20.15"
     }
     val akkaHttp        = "com.typesafe.akka"   %% "akka-http"                   % Version.akkaHttp
     val akkaHttpTestkit = "com.typesafe.akka"   %% "akka-http-testkit"           % Version.akkaHttp
     val akkaStream      = "com.typesafe.akka"   %% "akka-stream"                 % Version.akkaStream
     val catsCore        = "org.typelevel"       %% "cats-core"                   % Version.cats
+    val catsEffect      = "org.typelevel"       %% "cats-effect"                 % Version.cats
     val scalaCheck      = "org.scalacheck"      %% "scalacheck"        	         % Version.scalaCheck
     val scalaCheckTools = "com.47deg"           %% "scalacheck-toolbox-datetime" % Version.scalaCheckTools
     val scalaTest       = "org.scalatest"       %% "scalatest"                   % Version.scalaTest
     val shapeless       = "com.chuusai"         %% "shapeless"                   % Version.shapeless
     val yaidom          = "eu.cdevreeze.yaidom" %% "yaidom"                      % Version.yaidom
+    val http4sBlazeClient = "org.http4s"        %% "http4s-blaze-client"         % Version.http4s
+    val http4sDsl         = "org.http4s"        %% "http4s-dsl"                  % Version.http4s
   }
 
 // *****************************************************************************
