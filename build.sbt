@@ -38,6 +38,7 @@ lazy val amwsScala =
 	      library.scalaCheckTools % Test,
         library.scalaTest       % Test,
         library.http4sBlazeClient,
+        library.http4sBlazeServer,
         library.http4sDsl,
         library.catsEffect
 
@@ -74,6 +75,7 @@ lazy val library =
     val shapeless       = "com.chuusai"         %% "shapeless"                   % Version.shapeless
     val yaidom          = "eu.cdevreeze.yaidom" %% "yaidom"                      % Version.yaidom
     val http4sBlazeClient = "org.http4s"        %% "http4s-blaze-client"         % Version.http4s
+    val http4sBlazeServer = "org.http4s"        %% "http4s-blaze-server"          % Version.http4s
     val http4sDsl         = "org.http4s"        %% "http4s-dsl"                  % Version.http4s
   }
 
