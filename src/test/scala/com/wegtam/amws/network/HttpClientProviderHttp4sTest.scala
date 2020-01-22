@@ -11,9 +11,18 @@ package com.wegtam.amws.network
 import java.net.{ ServerSocket, URI }
 import java.util.concurrent.Executors
 import cats.effect._
+import org.http4s._
+import org.http4s.dsl.io._
+import org.http4s.implicits._
+import org.http4s.server.blaze._
+import cats.effect._
+import org.http4s.HttpRoutes
 import org.scalatest.{ AsyncWordSpec, BeforeAndAfterAll, MustMatchers }
+
 import scala.concurrent.ExecutionContext
 import org.http4s.client._
+import org.http4s.server.blaze.BlazeServerBuilder
+import scala.concurrent.ExecutionContext.global
 
 class HttpClientProviderHttp4sTest extends AsyncWordSpec with MustMatchers with BeforeAndAfterAll {
 
@@ -36,58 +45,76 @@ class HttpClientProviderHttp4sTest extends AsyncWordSpec with MustMatchers with 
     "using Http4s" when {
       "using get" when {
         "endpoint is not found" must {
-          "return the correct response data" in {
-            val port = findAvailablePort(true)
-//            val routes = HttpRoutes.of[IO] {
-//              case r => Ok(r.headers.get(Host).map(_.value).getOrElse("None"))
-//            }
-//            val route: HttpRoutes[IO] = Router{
-//            case GET =>
-//            }
-//
-//            val _ = Http().andThen(route, "localhost", port)
-            val uri = new URI(s"http://localhost:$port/get-me-wrong")
+          "return an error" in {
+            implicit val cs: ContextShift[IO] = IO.contextShift(global)
+            implicit val timer: Timer[IO]     = IO.timer(global)
+            val port                          = findAvailablePort(true)
+            val route = HttpRoutes
+              .of[IO] {
+                case POST -> Root / "hello" / name =>
+                  Ok(s"Hello, $name.")
+//                case x =>
+//                  Ok(s"FOO")
+              }
+              .orNotFound
+
+            val server =
+              BlazeServerBuilder[IO].bindHttp(port, "localhost").withHttpApp(route).resource
+            val fiber = server.use(_ => IO.never).start.unsafeRunSync()
+
+            val uri = new URI(s"http://localhost:$port/hello2/maali")
             val pld = AmwsRequestPayload(data = None)
 
-            val blockingEC   = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(5))
-            implicit val bar = scala.concurrent.ExecutionContext.Implicits.global
-            implicit val foo = cats.effect.IO.contextShift(bar)
+            val blockingEC = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(5))
             implicit val httpClient: Client[IO] =
               JavaNetClientBuilder[IO](blockingEC).create
 
             val client = new HttpClientProviderHttp4s()
             val a      = client.get(uri)(pld)
-            println(a)
-            val b = a.unsafeRunSync()
-            println(b.body)
-            b.body must be("foo")
+            val b      = a.attempt.unsafeRunSync()
+            val _      = fiber.cancel.unsafeRunSync()
+            b match {
+              case Left(e)  => e.getMessage must include("404 Not Found")
+              case Right(r) => fail(s"missing end point - $r")
+            }
           }
         }
+        "endpoint is valid" must {
+          "return the correct response data" in {
+            implicit val cs: ContextShift[IO] = IO.contextShift(global)
+            implicit val timer: Timer[IO]     = IO.timer(global)
+            val expectedResponse              = "I am the response"
+            val port                          = findAvailablePort(true)
+            val route = HttpRoutes
+              .of[IO] {
+                case POST -> Root / "get-me" =>
+                  Ok(expectedResponse)
+                case x =>
+                  Ok(s"$x")
+              }
+              .orNotFound
 
+            val server =
+              BlazeServerBuilder[IO].bindHttp(port, "localhost").withHttpApp(route).resource
+            val fiber = server.use(_ => IO.never).start.unsafeRunSync()
 
+            val uri = new URI(s"http://localhost:$port/get-me")
+            val pld = AmwsRequestPayload(data = None)
 
-//        "endpoint is valid" must {
-//          "return the correct response data" in {
-//            val port  =findAvailablePort(true)
-//            val expectedResponse = "I am the reponse!"
-//            val route: HttpRoutes[IO] = Router{
-//              case GET -> Root / "get-me" => "you should reach me"
-//            }
-//
-//            val _ = Http().andThen(route, "localhost", port)
-//
-//            val uri = new URI(s"http://localhost:$port/get-me")
-//            val pld = AmwsRequestPayload(data = None)
-//
-//            val client = new HttpClientProviderHttp4s()
-//            client.get(uri)(pld).map{
-//              case Left(e) => fail(s"Http request returned an error: $e")
-//              case Right(d) => d.b
-//            }
-//
-//          }
-//        }
+            val blockingEC = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(5))
+            implicit val httpClient: Client[IO] =
+              JavaNetClientBuilder[IO](blockingEC).create
 
+            val client                             = new HttpClientProviderHttp4s()
+            val a: IO[AmwsResponse]                = client.get(uri)(pld)
+            val b: Either[Throwable, AmwsResponse] = a.attempt.unsafeRunSync()
+            val _                                  = fiber.cancel.unsafeRunSync()
+            b match {
+              case Left(e)  => fail(s"Http request returned an error: $e")
+              case Right(d) => d.body must be(expectedResponse)
+            }
+          }
+        }
       }
     }
   }
